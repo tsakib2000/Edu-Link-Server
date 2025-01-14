@@ -10,7 +10,7 @@ app.use(express.json())
 app.use(cors())
 
 
-const uri = "mongodb+srv://<db_username>:<db_password>@cluster0.wu5vq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.wu5vq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -24,11 +24,36 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const db = client.db('Edu-Link')
+    const userCollection=db.collection('users')
+    const verifyToken= (req,res,next)=>{
+        console.log(req.headers);
+        if(!req.headers.authorization){
+            return res.status(401).send({message:'forbidden access'})
+        }
+        const token=req.headers.authorization.split(' ')[1];
+        jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err,decoded)=>{
+            if(err){
+                return res.status(401).send({message:'forbidden access'})
+            }
+            req.decoded = decoded;
+            next();
+        })
+    }
 // jwt api
 app.post('/jwt',async(req,res)=>{
     const user = req.body;
  const token=jwt.sign(user,process.env.ACCESS_TOKEN_SECRET,{expiresIn:"5h"})
  res.send({token});
+})
+
+//Users related api
+app.post('/users',async(req,res)=>{
+    const user= req.body;
+    const query={email:user.email}
+    const isExist= await userCollection.findOne(query)
+    if(isExist) return res.send({message:'user already exist',insertedId:null})
+    const result = await userCollection.insertOne(user)
+    res.send(result);
 })
 
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
