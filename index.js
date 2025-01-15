@@ -58,6 +58,11 @@ async function run() {
       const result = await userCollection.insertOne(user);
       res.send(result);
     });
+    //Get All users
+    app.get('/users',async(req,res)=>{
+      const result = await userCollection.find().toArray()
+      res.send(result)
+    })
     // get single user
     app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
@@ -73,6 +78,11 @@ async function run() {
       const result = await sessionCollection.insertOne(session);
       res.send(result);
     });
+    //get all sessions
+    app.get('/sessions',async(req,res)=>{
+      const result= await sessionCollection.find().toArray();
+      res.send(result)
+    })
     //get tutor sessions
     app.get('/sessions/:email',async(req,res)=>{
       const email=req.params.email;
