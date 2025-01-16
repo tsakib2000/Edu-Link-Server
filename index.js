@@ -25,16 +25,20 @@ async function run() {
     const db = client.db("Edu-Link");
     const userCollection = db.collection("users");
     const sessionCollection = db.collection("sessions");
+    const materialCollection = db.collection("materials");
+
+    //Verify JWT token
     const verifyToken = (req, res, next) => {
-      console.log(req.headers);
       if (!req.headers.authorization) {
         return res.status(401).send({ message: "forbidden access" });
       }
       const token = req.headers.authorization.split(" ")[1];
+  
       jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
         if (err) {
           return res.status(401).send({ message: "forbidden access" });
         }
+      
         req.decoded = decoded;
         next();
       });
@@ -48,8 +52,22 @@ async function run() {
       res.send({ token });
     });
 
+    //verify user IsAdmin
+    app.get("/user/admin/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      if (email !== req?.decoded?.email){
+        return res.status(403).send({ message: "unauthorized access" })
+      }
+        const query={email}
+        const user= await userCollection.findOne(query);
+        let admin = false
+        if(user){
+          admin = user.role === 'admin';
+        }
+        res.send({admin})
+    });
     //Users related api
-    app.post("/users", async (req, res) => {
+    app.post("/users", verifyToken, async (req, res) => {
       const user = req.body;
       const query = { email: user.email };
       const isExist = await userCollection.findOne(query);
@@ -59,12 +77,12 @@ async function run() {
       res.send(result);
     });
     //Get All users
-    app.get('/users',async(req,res)=>{
-      const result = await userCollection.find().toArray()
-      res.send(result)
-    })
+    app.get("/users", verifyToken, async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
     // get single user
-    app.get("/users/:email", async (req, res) => {
+    app.get("/users/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { email };
       const result = await userCollection.findOne(query);
@@ -73,53 +91,69 @@ async function run() {
     });
 
     //save tutor study session
-    app.post("/sessions", async (req, res) => {
+    app.post("/sessions", verifyToken, async (req, res) => {
       const session = req.body;
       const result = await sessionCollection.insertOne(session);
       res.send(result);
     });
     //get all sessions
-    app.get('/sessions',async(req,res)=>{
-      const result= await sessionCollection.find().toArray();
+    app.get("/sessions", verifyToken, async (req, res) => {
+      const result = await sessionCollection.find().toArray();
+      res.send(result);
+    });
+    //get approved sessions
+    app.get('/session/:status',async(req,res)=>{
+      const status= req.params.status
+      const query={status}
+      const result = await sessionCollection.find(query).toArray()
       res.send(result)
     })
     //get single session by id
-    app.get('/session/:id',async(req,res)=>{
-      const id=req.params.id;
-      const query={_id: new ObjectId(id)}
-      const result= await sessionCollection.findOne(query)
+    app.get("/session/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await sessionCollection.findOne(query);
       res.send(result);
-    })
+    });
     //re-post rejected sessions
-    app.post('/session/:id',async(req,res)=>{
-      const id=req.params.id;
-      const session= req.body;
+    app.post("/session/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const session = req.body;
       console.log(session);
-      const query={_id: new ObjectId(id)}
-      const deleteSession= await sessionCollection.deleteOne(query);
-     
+      const query = { _id: new ObjectId(id) };
+      const deleteSession = await sessionCollection.deleteOne(query);
+
       const result = await sessionCollection.insertOne(session);
-      res.send(result)
-    })
-    //update session 
-    app.patch('/session/:id',async(req,res)=>{
-      const id=req.params.id;
-      const query={_id:new ObjectId(id)}
-      const session=req.body;
-      const update={
-        $set:session
-      }
-      const result= await sessionCollection.updateOne(query,update)
-      res.send(result)
-    })
+      res.send(result);
+    });
+    //update session
+    app.patch("/session/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const session = req.body;
+      const update = {
+        $set: session,
+      };
+      const result = await sessionCollection.updateOne(query, update);
+      res.send(result);
+    });
     //get tutor sessions
-    app.get('/sessions/:email',async(req,res)=>{
-      const email=req.params.email;
-      const query={tutorEmail:email}
-     
-      const result= await sessionCollection.find(query).toArray();
-      
-      res.send(result)
+    app.get("/sessions/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      if (email !== req?.decoded?.email)
+        return res.status(403).send({ message: "unauthorized access" });
+      const query = { tutorEmail: email };
+
+      const result = await sessionCollection.find(query).toArray();
+
+      res.send(result);
+    });
+
+    //upload materials to db
+    app.post('/materials',async(req,res)=>{
+      const materials=req.body;
+      const result = await materialCollection.insertOne(materials);
+      res.send(result);
     })
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
