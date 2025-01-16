@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
 const app = express();
 
@@ -81,6 +81,35 @@ async function run() {
     //get all sessions
     app.get('/sessions',async(req,res)=>{
       const result= await sessionCollection.find().toArray();
+      res.send(result)
+    })
+    //get single session by id
+    app.get('/session/:id',async(req,res)=>{
+      const id=req.params.id;
+      const query={_id: new ObjectId(id)}
+      const result= await sessionCollection.findOne(query)
+      res.send(result);
+    })
+    //re-post rejected sessions
+    app.post('/session/:id',async(req,res)=>{
+      const id=req.params.id;
+      const session= req.body;
+      console.log(session);
+      const query={_id: new ObjectId(id)}
+      const deleteSession= await sessionCollection.deleteOne(query);
+     
+      const result = await sessionCollection.insertOne(session);
+      res.send(result)
+    })
+    //update session 
+    app.patch('/session/:id',async(req,res)=>{
+      const id=req.params.id;
+      const query={_id:new ObjectId(id)}
+      const session=req.body;
+      const update={
+        $set:session
+      }
+      const result= await sessionCollection.updateOne(query,update)
       res.send(result)
     })
     //get tutor sessions
