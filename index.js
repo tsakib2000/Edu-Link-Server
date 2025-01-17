@@ -67,7 +67,7 @@ async function run() {
         res.send({admin})
     });
     //Users related api
-    app.post("/users", verifyToken, async (req, res) => {
+    app.post("/users", async (req, res) => {
       const user = req.body;
       const query = { email: user.email };
       const isExist = await userCollection.findOne(query);
@@ -102,9 +102,13 @@ async function run() {
       res.send(result);
     });
     //get approved sessions
-    app.get('/session/:status',async(req,res)=>{
+    app.get('/session/:status/:email',async(req,res)=>{
       const status= req.params.status
-      const query={status}
+      const email =req.params.email;
+      const query={
+        status,
+        tutorEmail:email
+      }
       const result = await sessionCollection.find(query).toArray()
       res.send(result)
     })
@@ -154,6 +158,21 @@ async function run() {
       const materials=req.body;
       const result = await materialCollection.insertOne(materials);
       res.send(result);
+    })
+    //view tutor materials
+    app.get('/materials/:email',verifyToken,async(req,res)=>{
+      const email=req.params.email;
+      const query= {tutorEmail:email}
+      const result = await materialCollection.find(query).toArray()
+      res.send(result)
+
+    })
+    //get single material by ID 
+    app.get('/material/:id',async(req,res)=>{
+      const id=req.params.id;
+      const query={_id:new ObjectId(id)}
+      const result = await materialCollection.findOne(query);
+      res.send(result)
     })
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
