@@ -161,6 +161,13 @@ res.send(result)
       const result = await sessionCollection.updateOne(query, update);
       res.send(result);
     });
+    //delete Session 
+    app.delete('/session/:id',async(req,res)=>{
+      const id=req.params.id;
+      const query={_id:new ObjectId(id)}
+      const result= await sessionCollection.deleteOne(query);
+      res.send(result)
+    })
     //get tutor sessions
     app.get("/sessions/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
