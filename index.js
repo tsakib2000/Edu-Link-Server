@@ -174,6 +174,24 @@ async function run() {
       const result = await materialCollection.findOne(query);
       res.send(result)
     })
+    // update material 
+    app.patch('/material/:id',async(req,res)=>{
+      const id=req.params.id;
+      const query={_id:new ObjectId(id)};
+      const materials=req.body;
+      const updateMaterial={
+        $set:materials
+      }
+      const result = await materialCollection.updateOne(query,updateMaterial)
+      res.send(result)
+    })
+    //delete material
+    app.delete('/material/:id',async(req,res)=>{
+const id= req.params.id;
+const query={_id:new ObjectId(id)}
+const result = await materialCollection.deleteOne(query);
+res.send(result);
+    })
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
