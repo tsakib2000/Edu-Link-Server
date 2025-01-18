@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY)
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
@@ -66,6 +67,14 @@ async function run() {
       }
       res.send({ admin });
     });
+    //get all tutor
+    app.get('/users/:role',async(req,res)=>{
+      const role=req.params.role;
+      const query= {role}
+      const result= await userCollection.find(query).toArray();
+      res.send(result)
+    })
+
     //Users related api
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -102,20 +111,28 @@ res.send(result)
       res.send(result);
     });
     // get single user
-    app.get("/users/:email", verifyToken, async (req, res) => {
+    app.get("/users/role/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { email };
       const result = await userCollection.findOne(query);
-
       res.send(result);
     });
 
+    
     //save tutor study session
     app.post("/sessions", verifyToken, async (req, res) => {
       const session = req.body;
       const result = await sessionCollection.insertOne(session);
       res.send(result);
     });
+
+    //get limited & approved study session
+    app.get('/approvedSessions/:status',async(req,res)=>{
+const status=req.params.status;
+const query={status}
+      const result = await sessionCollection.find(query).limit(6).toArray()
+      res.send(result)
+    })
     //get all sessions
     app.get("/sessions", verifyToken, async (req, res) => {
       const result = await sessionCollection.find().toArray();
@@ -223,6 +240,24 @@ res.send(result)
       const result = await materialCollection.deleteOne(query);
       res.send(result);
     });
+
+    //payment intent
+    app.post('/create-payment-intent',async(req,res)=>{
+      const {fee}=req.body;
+      if (!fee || isNaN(fee)) {
+        return res.status(400).send({ error: 'Invalid fee provided' });
+      }
+      const amount=parseInt(fee*100)
+      
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount:amount,
+        currency:'usd',
+        payment_method_types:['card']
+      });
+      res.send({
+        clientSecret:paymentIntent.client_secret
+      })
+    })
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
