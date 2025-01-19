@@ -28,6 +28,7 @@ async function run() {
     const sessionCollection = db.collection("sessions");
     const materialCollection = db.collection("materials");
     const bookedSessionCollection = db.collection("bookedSession");
+    const reviewCollection = db.collection("reviews");
     //Verify JWT token
     const verifyToken = (req, res, next) => {
       if (!req.headers.authorization) {
@@ -53,20 +54,7 @@ async function run() {
       res.send({ token });
     });
 
-    //verify user IsAdmin
-    app.get("/user/admin/:email", verifyToken, async (req, res) => {
-      const email = req.params.email;
-      if (email !== req?.decoded?.email) {
-        return res.status(403).send({ message: "unauthorized access" });
-      }
-      const query = { email };
-      const user = await userCollection.findOne(query);
-      let admin = false;
-      if (user) {
-        admin = user.role === "admin";
-      }
-      res.send({ admin });
-    });
+
     //get all tutor
     app.get("/users/:role", async (req, res) => {
       const role = req.params.role;
@@ -247,7 +235,7 @@ async function run() {
     app.get("/booked-materials/:email", async (req, res) => {
       const studentEmail = req.params.email;
 
-      const bookedSessions = await bookedSessionCollection
+      const bookedSessions = await reviewCollection
         .find({ studentEmail })
         .project({ sessionId: 1, _id: 0 })
         .toArray();
@@ -293,6 +281,20 @@ async function run() {
         clientSecret: paymentIntent.client_secret,
       });
     });
+
+    //post student review
+    app.post('/reviews',verifyToken,async(req,res)=>{
+      const review= req.body;
+      const result= await reviewCollection.insertOne(review);
+      res.send(result)
+    })
+    //get all review by id 
+    app.get('/reviews/:id',verifyToken,async(req,res)=>{
+      const sessionId=req.params.id;
+      const query={sessionId}
+      const result= await reviewCollection.find(query).toArray();
+      res.send(result)
+    })
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
