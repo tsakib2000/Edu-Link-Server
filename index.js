@@ -29,6 +29,7 @@ async function run() {
     const materialCollection = db.collection("materials");
     const bookedSessionCollection = db.collection("bookedSession");
     const reviewCollection = db.collection("reviews");
+    const noteCollection = db.collection("notes");
     //Verify JWT token
     const verifyToken = (req, res, next) => {
       if (!req.headers.authorization) {
@@ -53,7 +54,6 @@ async function run() {
       });
       res.send({ token });
     });
-
 
     //get all tutor
     app.get("/users/:role", async (req, res) => {
@@ -241,8 +241,8 @@ async function run() {
         .toArray();
       const sessionIds = bookedSessions.map((session) => session.sessionId);
       const query = { sessionId: { $in: sessionIds } };
-      const result= await materialCollection.find(query).toArray()
-      res.send(result)
+      const result = await materialCollection.find(query).toArray();
+      res.send(result);
     });
     // post booked study session
     app.post("/bookSession", verifyToken, async (req, res) => {
@@ -258,12 +258,12 @@ async function run() {
       res.send(result);
     });
     //get booked session by id
-    app.get('/bookedSession/details/:id',verifyToken,async(req,res)=>{
-      const id=req.params.id;
-   const query={_id:new ObjectId(id)}
-   const result= await bookedSessionCollection.findOne(query);
-   res.send(result)
-    })
+    app.get("/bookedSession/details/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await bookedSessionCollection.findOne(query);
+      res.send(result);
+    });
     //payment intent
     app.post("/create-payment-intent", async (req, res) => {
       const { fee } = req.body;
@@ -283,18 +283,57 @@ async function run() {
     });
 
     //post student review
-    app.post('/reviews',verifyToken,async(req,res)=>{
-      const review= req.body;
-      const result= await reviewCollection.insertOne(review);
+    app.post("/reviews", verifyToken, async (req, res) => {
+      const review = req.body;
+      const result = await reviewCollection.insertOne(review);
+      res.send(result);
+    });
+    //get all review by id
+    app.get("/reviews/:id", verifyToken, async (req, res) => {
+      const sessionId = req.params.id;
+      const query = { sessionId };
+      const result = await reviewCollection.find(query).toArray();
+      res.send(result);
+    });
+    //post student note
+    app.post("/note", verifyToken, async (req, res) => {
+      const note = req.body;
+      const result = await noteCollection.insertOne(note);
+      res.send(result);
+    });
+    //get note by id
+    app.get('/singleNote/:id',verifyToken,async(req,res)=>{
+      const id=req.params.id;
+      const query={_id:new ObjectId(id)};
+      const result= await noteCollection.findOne(query);
       res.send(result)
     })
-    //get all review by id 
-    app.get('/reviews/:id',verifyToken,async(req,res)=>{
-      const sessionId=req.params.id;
-      const query={sessionId}
-      const result= await reviewCollection.find(query).toArray();
-      res.send(result)
-    })
+    //get note by email
+    app.get("/note/personal/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const query = {studentEmail:email };
+      const result = await noteCollection.find(query).toArray();
+      res.send(result);
+    });
+    //update note
+    app.patch("/note/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const note = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateNote = {
+        $set: note,
+      };
+      const result = await noteCollection.updateOne(query, updateNote);
+      res.send(result);
+    });
+    
+    //delete note
+    app.delete("/note/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await noteCollection.deleteOne(query);
+      res.send(result);
+    });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
