@@ -1,7 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY)
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
@@ -27,7 +27,7 @@ async function run() {
     const userCollection = db.collection("users");
     const sessionCollection = db.collection("sessions");
     const materialCollection = db.collection("materials");
-
+    const bookedSessionCollection = db.collection("bookedSession");
     //Verify JWT token
     const verifyToken = (req, res, next) => {
       if (!req.headers.authorization) {
@@ -68,12 +68,12 @@ async function run() {
       res.send({ admin });
     });
     //get all tutor
-    app.get('/users/:role',async(req,res)=>{
-      const role=req.params.role;
-      const query= {role}
-      const result= await userCollection.find(query).toArray();
-      res.send(result)
-    })
+    app.get("/users/:role", async (req, res) => {
+      const role = req.params.role;
+      const query = { role };
+      const result = await userCollection.find(query).toArray();
+      res.send(result);
+    });
 
     //Users related api
     app.post("/users", async (req, res) => {
@@ -86,27 +86,27 @@ async function run() {
       res.send(result);
     });
     //update user to admin
-    app.patch('/user/:id',async(req,res)=>{
-const role=req.body;
-const id=req.params.id;
-const query={_id:new ObjectId(id)};
-const updateRole={
-  $set:role
-}
-const result = await userCollection.updateOne(query,updateRole)
-res.send(result)
-    })
+    app.patch("/user/:id", async (req, res) => {
+      const role = req.body;
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const updateRole = {
+        $set: role,
+      };
+      const result = await userCollection.updateOne(query, updateRole);
+      res.send(result);
+    });
     //Get All users
     app.get("/users", verifyToken, async (req, res) => {
-      const search =req.query.search;
-      let query={};
-      query={
-        email:{
-          $regex:String(search),
-          $options:'i',
-        }
-      }
-   
+      const search = req.query.search;
+      let query = {};
+      query = {
+        email: {
+          $regex: String(search),
+          $options: "i",
+        },
+      };
+
       const result = await userCollection.find(query).toArray();
       res.send(result);
     });
@@ -118,7 +118,6 @@ res.send(result)
       res.send(result);
     });
 
-    
     //save tutor study session
     app.post("/sessions", verifyToken, async (req, res) => {
       const session = req.body;
@@ -127,19 +126,23 @@ res.send(result)
     });
 
     //get limited & approved study session
-    app.get('/approvedSessions/:status',async(req,res)=>{
-const status=req.params.status;
-const query={status}
-      const result = await sessionCollection.find(query).limit(6).toArray()
-      res.send(result)
-    })
+    app.get("/approvedSessions/:status", async (req, res) => {
+      const status = req.params.status;
+      const query = { status };
+      const result = await sessionCollection
+        .find(query)
+        .sort({ _id: -1 })
+        .limit(6)
+        .toArray();
+      res.send(result);
+    });
     //get all sessions
     app.get("/sessions", verifyToken, async (req, res) => {
       const result = await sessionCollection.find().toArray();
       res.send(result);
     });
     //get approved sessions
-    app.get("/session/:status/:email", verifyToken,async (req, res) => {
+    app.get("/session/:status/:email", verifyToken, async (req, res) => {
       const status = req.params.status;
       const email = req.params.email;
       const query = {
@@ -178,13 +181,13 @@ const query={status}
       const result = await sessionCollection.updateOne(query, update);
       res.send(result);
     });
-    //delete Session 
-    app.delete('/session/:id',async(req,res)=>{
-      const id=req.params.id;
-      const query={_id:new ObjectId(id)}
-      const result= await sessionCollection.deleteOne(query);
-      res.send(result)
-    })
+    //delete Session
+    app.delete("/session/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await sessionCollection.deleteOne(query);
+      res.send(result);
+    });
     //get tutor sessions
     app.get("/sessions/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
@@ -198,16 +201,16 @@ const query={status}
     });
 
     //upload materials to db
-    app.post("/materials", verifyToken,async (req, res) => {
+    app.post("/materials", verifyToken, async (req, res) => {
       const materials = req.body;
       const result = await materialCollection.insertOne(materials);
       res.send(result);
     });
     //get all materials
-    app.get('/materials',async(req,res)=>{
-      const result = await materialCollection.find().toArray()
+    app.get("/materials", async (req, res) => {
+      const result = await materialCollection.find().toArray();
       res.send(result);
-    })
+    });
     //view tutor materials
     app.get("/materials/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
@@ -216,14 +219,14 @@ const query={status}
       res.send(result);
     });
     //get single material by ID
-    app.get("/material/:id", verifyToken,async (req, res) => {
+    app.get("/material/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await materialCollection.findOne(query);
       res.send(result);
     });
     // update material
-    app.patch("/material/:id", verifyToken,async (req, res) => {
+    app.patch("/material/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const materials = req.body;
@@ -234,30 +237,62 @@ const query={status}
       res.send(result);
     });
     //delete material
-    app.delete("/material/:id", verifyToken,async (req, res) => {
+    app.delete("/material/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await materialCollection.deleteOne(query);
       res.send(result);
     });
+    //get materials by session Id
+    app.get("/booked-materials/:email", async (req, res) => {
+      const studentEmail = req.params.email;
 
+      const bookedSessions = await bookedSessionCollection
+        .find({ studentEmail })
+        .project({ sessionId: 1, _id: 0 })
+        .toArray();
+      const sessionIds = bookedSessions.map((session) => session.sessionId);
+      const query = { sessionId: { $in: sessionIds } };
+      const result= await materialCollection.find(query).toArray()
+      res.send(result)
+    });
+    // post booked study session
+    app.post("/bookSession", verifyToken, async (req, res) => {
+      const sessionInfo = req.body;
+      const result = await bookedSessionCollection.insertOne(sessionInfo);
+      res.send(result);
+    });
+    //get all booked session by email
+    app.get("/bookedSession/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const query = { studentEmail: email };
+      const result = await bookedSessionCollection.find(query).toArray();
+      res.send(result);
+    });
+    //get booked session by id
+    app.get('/bookedSession/details/:id',verifyToken,async(req,res)=>{
+      const id=req.params.id;
+   const query={_id:new ObjectId(id)}
+   const result= await bookedSessionCollection.findOne(query);
+   res.send(result)
+    })
     //payment intent
-    app.post('/create-payment-intent',async(req,res)=>{
-      const {fee}=req.body;
+    app.post("/create-payment-intent", async (req, res) => {
+      const { fee } = req.body;
       if (!fee || isNaN(fee)) {
-        return res.status(400).send({ error: 'Invalid fee provided' });
+        return res.status(400).send({ error: "Invalid fee provided" });
       }
-      const amount=parseInt(fee*100)
-      
+      const amount = parseInt(fee * 100);
+
       const paymentIntent = await stripe.paymentIntents.create({
-        amount:amount,
-        currency:'usd',
-        payment_method_types:['card']
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
       });
       res.send({
-        clientSecret:paymentIntent.client_secret
-      })
-    })
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
