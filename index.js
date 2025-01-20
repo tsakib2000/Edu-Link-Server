@@ -57,6 +57,29 @@ async function run() {
       }
       next();
     }
+    //verify Tutor
+    const verifyTutor=async(req,res,next)=>{
+      const email = req.decoded.email;
+      const query ={email}
+      const user = await usersCollection.findOne(query)
+      const isTutor = user?.role === 'tutor'
+      if(!isTutor){
+        return res.status(403).send({message:'Forbidden Access'})
+      }
+      next();
+    }
+    // jwt api
+    //verify Tutor
+    const verifyStudent=async(req,res,next)=>{
+      const email = req.decoded.email;
+      const query ={email}
+      const user = await usersCollection.findOne(query)
+      const isStudent = user?.role === 'student'
+      if(!isStudent){
+        return res.status(403).send({message:'Forbidden Access'})
+      }
+      next();
+    }
     // jwt api
     app.post("/jwt", async (req, res) => {
       const user = req.body;
@@ -130,7 +153,7 @@ async function run() {
     })
 
     //save tutor study session
-    app.post("/sessions", verifyToken, async (req, res) => {
+    app.post("/sessions", verifyToken, verifyTutor,async (req, res) => {
       const session = req.body;
       const result = await sessionCollection.insertOne(session);
       res.send(result);
@@ -171,7 +194,7 @@ async function run() {
       res.send(result);
     });
     //re-post rejected sessions
-    app.post("/session/:id", verifyToken, async (req, res) => {
+    app.post("/session/:id", verifyToken, verifyTutor,async (req, res) => {
       const id = req.params.id;
       const session = req.body;
       console.log(session);
@@ -326,7 +349,7 @@ async function run() {
       res.send(result);
     });
     //post student note
-    app.post("/note", verifyToken, async (req, res) => {
+    app.post("/note", verifyToken, verifyStudent,async (req, res) => {
       const note = req.body;
       const result = await noteCollection.insertOne(note);
       res.send(result);
@@ -346,7 +369,7 @@ async function run() {
       res.send(result);
     });
     //update note
-    app.patch("/note/:id", verifyToken, async (req, res) => {
+    app.patch("/note/:id", verifyToken, verifyStudent,async (req, res) => {
       const id = req.params.id;
       const note = req.body;
       const query = { _id: new ObjectId(id) };
@@ -358,7 +381,7 @@ async function run() {
     });
 
     //delete note
-    app.delete("/note/:id", verifyToken, async (req, res) => {
+    app.delete("/note/:id", verifyToken,async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await noteCollection.deleteOne(query);
