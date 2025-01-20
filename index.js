@@ -7,8 +7,8 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
 const app = express();
 
-app.use(express.json());
 app.use(cors());
+app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.wu5vq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -87,6 +87,9 @@ async function run() {
     //Get All users
     app.get("/users", verifyToken, async (req, res) => {
       const search = req.query.search;
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      
       let query = {};
       query = {
         email: {
@@ -95,7 +98,7 @@ async function run() {
         },
       };
 
-      const result = await userCollection.find(query).toArray();
+      const result = await userCollection.find(query).skip(page*size).limit(size).toArray();
       res.send(result);
     });
     // get single user
@@ -105,6 +108,11 @@ async function run() {
       const result = await userCollection.findOne(query);
       res.send(result);
     });
+    //get user count 
+    app.get('/user-count',verifyToken,async(req,res)=>{
+      const count = await userCollection.estimatedDocumentCount();
+      res.send({count})
+    })
 
     //save tutor study session
     app.post("/sessions", verifyToken, async (req, res) => {
@@ -196,7 +204,9 @@ async function run() {
     });
     //get all materials
     app.get("/materials", async (req, res) => {
-      const result = await materialCollection.find().toArray();
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      const result = await materialCollection.find().skip(page*size).limit(size).toArray();
       res.send(result);
     });
     //view tutor materials
@@ -244,6 +254,11 @@ async function run() {
       const result = await materialCollection.find(query).toArray();
       res.send(result);
     });
+    //get material count
+    app.get('/material-count',verifyToken,async(req,res)=>{
+      const count= await materialCollection.estimatedDocumentCount();
+      res.send({count})
+    })
     // post booked study session
     app.post("/bookSession", verifyToken, async (req, res) => {
       const sessionInfo = req.body;
@@ -302,16 +317,16 @@ async function run() {
       res.send(result);
     });
     //get note by id
-    app.get('/singleNote/:id',verifyToken,async(req,res)=>{
-      const id=req.params.id;
-      const query={_id:new ObjectId(id)};
-      const result= await noteCollection.findOne(query);
-      res.send(result)
-    })
+    app.get("/singleNote/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await noteCollection.findOne(query);
+      res.send(result);
+    });
     //get note by email
     app.get("/note/personal/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
-      const query = {studentEmail:email };
+      const query = { studentEmail: email };
       const result = await noteCollection.find(query).toArray();
       res.send(result);
     });
@@ -326,7 +341,7 @@ async function run() {
       const result = await noteCollection.updateOne(query, updateNote);
       res.send(result);
     });
-    
+
     //delete note
     app.delete("/note/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
