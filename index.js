@@ -33,19 +33,30 @@ async function run() {
     //Verify JWT token
     const verifyToken = (req, res, next) => {
       if (!req.headers.authorization) {
-        return res.status(401).send({ message: "forbidden access" });
+        return res.status(401).send({ message: "unauthorized access" });
       }
       const token = req.headers.authorization.split(" ")[1];
 
       jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
         if (err) {
-          return res.status(401).send({ message: "forbidden access" });
+          return res.status(403).send({ message: "forbidden access" });
         }
 
         req.decoded = decoded;
         next();
       });
     };
+    //verify user admin
+    const verifyAdmin=async(req,res,next)=>{
+      const email = req.decoded.email;
+      const query ={email}
+      const user = await usersCollection.findOne(query)
+      const isAdmin = user?.role === 'admin'
+      if(!isAdmin){
+        return res.status(403).send({message:'Forbidden Access'})
+      }
+      next();
+    }
     // jwt api
     app.post("/jwt", async (req, res) => {
       const user = req.body;
@@ -54,6 +65,8 @@ async function run() {
       });
       res.send({ token });
     });
+
+
 
     //get all tutor
     app.get("/users/:role", async (req, res) => {
@@ -64,6 +77,8 @@ async function run() {
     });
 
     //Users related api
+
+    //post api
     app.post("/users", async (req, res) => {
       const user = req.body;
       const query = { email: user.email };
@@ -74,7 +89,7 @@ async function run() {
       res.send(result);
     });
     //update user to admin
-    app.patch("/user/:id", async (req, res) => {
+    app.patch("/user/:id",verifyToken,verifyAdmin, async (req, res) => {
       const role = req.body;
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -178,7 +193,7 @@ async function run() {
       res.send(result);
     });
     //delete Session
-    app.delete("/session/:id", async (req, res) => {
+    app.delete("/session/:id", verifyToken,async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await sessionCollection.deleteOne(query);
@@ -203,7 +218,7 @@ async function run() {
       res.send(result);
     });
     //get all materials
-    app.get("/materials", async (req, res) => {
+    app.get("/materials", verifyToken,async (req, res) => {
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
       const result = await materialCollection.find().skip(page*size).limit(size).toArray();
@@ -242,7 +257,7 @@ async function run() {
       res.send(result);
     });
     //get materials by session Id
-    app.get("/booked-materials/:email", async (req, res) => {
+    app.get("/booked-materials/:email",verifyToken, async (req, res) => {
       const studentEmail = req.params.email;
 
       const bookedSessions = await reviewCollection
