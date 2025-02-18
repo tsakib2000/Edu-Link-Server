@@ -170,6 +170,16 @@ async function run() {
         .toArray();
       res.send(result);
     });
+
+    //get approved study session
+    app.get("/AllApprovedSessions/:status", async (req, res) => {
+      const status = req.params.status;
+      const query = { status };
+      const result = await sessionCollection
+        .find(query)
+        .toArray();
+      res.send(result);
+    });
     //get all sessions
     app.get("/sessions", verifyToken, async (req, res) => {
       const result = await sessionCollection.find().toArray();
