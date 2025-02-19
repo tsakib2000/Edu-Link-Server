@@ -174,11 +174,19 @@ async function run() {
     //get approved study session
     app.get("/AllApprovedSessions/:status", async (req, res) => {
       const status = req.params.status;
+      const sort = req.query.sort;
+      
+      let sortOrder = {};
       const query = { status };
+      if (sort) {
+        options = { sort: { fee: sort === "asc" ? 1 : -1 } };
+      }
       const result = await sessionCollection
         .find(query)
+        .sort(sortOrder)
         .toArray();
       res.send(result);
+  
     });
     //get all sessions
     app.get("/sessions", verifyToken, async (req, res) => {
@@ -397,6 +405,15 @@ async function run() {
       const result = await noteCollection.deleteOne(query);
       res.send(result);
     });
+
+    app.get('/dashboardStats',async(req,res)=>{
+      const bookedSessions = await bookedSessionCollection.countDocuments();
+      const users = await userCollection.countDocuments();
+      const sessions = await sessionCollection.countDocuments();
+      const materials = await materialCollection.countDocuments();
+      const reviews = await  reviewCollection.countDocuments();
+      res.send({ bookedSessions, users, sessions, materials, reviews })
+    })
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
